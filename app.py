@@ -2,23 +2,18 @@ from flask import Flask, render_template, request, jsonify
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
-import logging
-import traceback
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 app = Flask(__name__)
-logging.basicConfig(level=logging.INFO)
 
 def format_recipe(recipe_text):
-    # sections
     sections = recipe_text.split('\n\n')
     formatted_sections = []
     
     for section in sections:
         if 'Ingredients:' in section:
-            # format ingredients as a list
             lines = section.split('\n')
             formatted_sections.append(f"<h2>{lines[0]}</h2>")
             formatted_sections.append("<ul>")
@@ -27,20 +22,17 @@ def format_recipe(recipe_text):
                     formatted_sections.append(f"<li>{line.strip()}</li>")
             formatted_sections.append("</ul>")
         elif 'Instructions:' in section:
-            # format instructions as a numbered list
             lines = section.split('\n')
             formatted_sections.append(f"<h2>{lines[0]}</h2>")
             formatted_sections.append("<ol>")
             for line in lines[1:]:
-                if line.strip(): 
-                    # remove leading numbers if they exist
+                if line.strip():
                     cleaned_line = line.strip()
                     if cleaned_line[0].isdigit() and cleaned_line[1] in ['.', ')']:
                         cleaned_line = cleaned_line[2:].strip()
                     formatted_sections.append(f"<li>{cleaned_line}</li>")
             formatted_sections.append("</ol>")
         else:
-            # format other sections with paragraphs
             formatted_sections.append(f"<p>{section}</p>")
     
     return '\n'.join(formatted_sections)
@@ -52,29 +44,10 @@ def home():
 @app.route('/generate_recipe', methods=['POST'])
 def generate_recipe():
     try:
-        if not request.is_json:
-            return jsonify({
-                'success': False,
-                'error': 'Request must be JSON'
-            }), 400
-
-        data = request.get_json()
-        if data is None:
-            return jsonify({
-                'success': False,
-                'error': 'Invalid JSON data'
-            }), 400
-
-        cuisine = data.get('cuisine')
+        data = request.json
+        cuisine = data.get('cuisine', '')
         dietary_restrictions = data.get('restrictions', [])
         
-        if not cuisine:
-            return jsonify({
-                'success': False,
-                'error': 'Cuisine is required'
-            }), 400
-        
-        # create prompt for recipe generation
         restrictions_text = ', '.join(dietary_restrictions)
         base_prompt = (
             "Create a recipe for a delicious {cuisine} dish{restrictions}. "
@@ -87,71 +60,38 @@ def generate_recipe():
         
         restrictions_phrase = f" that is {restrictions_text}" if restrictions_text else ""
         prompt = base_prompt.format(cuisine=cuisine, restrictions=restrictions_phrase)
+        
+        recipe_response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a professional chef creating detailed, easy-to-follow recipes. Your recipes should be creative yet practical, using commonly available ingredients. Include precise measurements and clear instructions."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        recipe = recipe_response.choices[0].message.content
+        formatted_recipe = format_recipe(recipe)
 
-        try:
-            # First, try to generate the recipe
-            recipe_response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a professional chef creating detailed, easy-to-follow recipes. Your recipes should be creative yet practical, using commonly available ingredients. Include precise measurements and clear instructions."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            
-            if not recipe_response or not recipe_response.choices:
-                logging.error("Empty response from OpenAI API")
-                return jsonify({
-                    'success': False,
-                    'error': 'Failed to generate recipe. Empty response from API.'
-                }), 500
+        image_prompt = f"A professional, appetizing food photography style image of a {cuisine} dish{restrictions_phrase}, on a beautiful plate with garnish, soft natural lighting, shallow depth of field, high-end restaurant presentation"
+        image_response = client.images.generate(
+            prompt=image_prompt,
+            n=1,
+            size="1024x1024",
+            quality="hd",
+            model="dall-e-3"
+        )
+        image_url = image_response.data[0].url
 
-            recipe = recipe_response.choices[0].message.content
-            formatted_recipe = format_recipe(recipe)
-
-            # Only if recipe generation succeeds, try to generate the image
-            try:
-                image_prompt = f"A professional, appetizing food photography style image of a {cuisine} dish{restrictions_phrase}, on a beautiful plate with garnish, soft natural lighting, shallow depth of field, high-end restaurant presentation"
-                image_response = client.images.generate(
-                    prompt=image_prompt,
-                    n=1,
-                    size="1024x1024",
-                    quality="hd",
-                    model="dall-e-3"
-                )
-                
-                if not image_response or not image_response.data:
-                    raise Exception("Empty image response from API")
-                    
-                image_url = image_response.data[0].url
-            except Exception as img_error:
-                logging.error(f"Image generation failed: {str(img_error)}\n{traceback.format_exc()}")
-                # If image generation fails, return recipe without image
-                return jsonify({
-                    'success': True,
-                    'recipe': formatted_recipe,
-                    'image_url': None,
-                    'warning': 'Recipe generated successfully, but image generation failed'
-                })
-
-            return jsonify({
-                'success': True,
-                'recipe': formatted_recipe,
-                'image_url': image_url
-            })
-            
-        except Exception as recipe_error:
-            logging.error(f"Recipe generation failed: {str(recipe_error)}\n{traceback.format_exc()}")
-            return jsonify({
-                'success': False,
-                'error': 'Failed to generate recipe. Please try again.'
-            }), 500
-            
+        return jsonify({
+            'success': True,
+            'recipe': formatted_recipe,
+            'image_url': image_url
+        })
+        
     except Exception as e:
-        logging.error(f"Request processing failed: {str(e)}\n{traceback.format_exc()}")
         return jsonify({
             'success': False,
-            'error': 'An unexpected error occurred. Please try again.'
+            'error': str(e)
         }), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5002)
