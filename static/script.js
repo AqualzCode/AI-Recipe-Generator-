@@ -13,6 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const restrictions = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
             .map(checkbox => checkbox.value);
 
+        if (!cuisine) {
+            alert('Please select a cuisine');
+            return;
+        }
+
         // Show loading spinner with animation
         loadingSpinner.classList.remove('d-none');
         loadingSpinner.classList.add('animate__animated', 'animate__fadeIn');
@@ -39,8 +44,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Update recipe content
                 recipeContent.innerHTML = data.recipe;
 
-                // Create and add image
-                recipeImage.innerHTML = `<img src="${data.image_url}" alt="${cuisine} recipe" class="img-fluid">`;
+                // Handle image if available
+                if (data.image_url) {
+                    recipeImage.innerHTML = `<img src="${data.image_url}" alt="${cuisine} recipe" class="img-fluid">`;
+                } else {
+                    recipeImage.innerHTML = '<div class="text-center p-4"><p>Image generation failed. Recipe is still available below.</p></div>';
+                }
+
+                // Show warning if present
+                if (data.warning) {
+                    const warningDiv = document.createElement('div');
+                    warningDiv.className = 'alert alert-warning mt-3';
+                    warningDiv.textContent = data.warning;
+                    recipeContent.insertBefore(warningDiv, recipeContent.firstChild);
+                }
 
                 // Show recipe result with animation
                 recipeResult.classList.remove('d-none');
@@ -53,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Failed to generate recipe. Please try again.');
+            alert(error.message || 'Failed to generate recipe. Please try again.');
             loadingSpinner.classList.add('d-none');
         }
     });
