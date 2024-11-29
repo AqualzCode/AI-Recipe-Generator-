@@ -35,18 +35,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
             });
 
-            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                console.error('JSON Parse Error:', jsonError);
+                throw new Error('Failed to parse server response');
+            }
 
             if (data.success) {
                 // Hide loading spinner
                 loadingSpinner.classList.add('d-none');
 
                 // Update recipe content
-                recipeContent.innerHTML = data.recipe;
+                recipeContent.innerHTML = data.recipe || '<p>No recipe content received</p>';
 
                 // Handle image if available
                 if (data.image_url) {
-                    recipeImage.innerHTML = `<img src="${data.image_url}" alt="${cuisine} recipe" class="img-fluid">`;
+                    recipeImage.innerHTML = `<img src="${data.image_url}" alt="${cuisine} recipe" class="img-fluid" onerror="this.onerror=null; this.src=''; this.alt='Image failed to load'; this.parentElement.innerHTML='<div class=\\'text-center p-4\\'><p>Image failed to load</p></div>';">`;
                 } else {
                     recipeImage.innerHTML = '<div class="text-center p-4"><p>Image generation failed. Recipe is still available below.</p></div>';
                 }

@@ -3,6 +3,7 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 import logging
+import traceback
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -32,7 +33,7 @@ def format_recipe(recipe_text):
             formatted_sections.append("<ol>")
             for line in lines[1:]:
                 if line.strip(): 
-                    # removee leading numbers if they exist
+                    # remove leading numbers if they exist
                     cleaned_line = line.strip()
                     if cleaned_line[0].isdigit() and cleaned_line[1] in ['.', ')']:
                         cleaned_line = cleaned_line[2:].strip()
@@ -51,8 +52,20 @@ def home():
 @app.route('/generate_recipe', methods=['POST'])
 def generate_recipe():
     try:
-        data = request.json
-        cuisine = data.get('cuisine', '')
+        if not request.is_json:
+            return jsonify({
+                'success': False,
+                'error': 'Request must be JSON'
+            }), 400
+
+        data = request.get_json()
+        if data is None:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid JSON data'
+            }), 400
+
+        cuisine = data.get('cuisine')
         dietary_restrictions = data.get('restrictions', [])
         
         if not cuisine:
@@ -84,6 +97,14 @@ def generate_recipe():
                     {"role": "user", "content": prompt}
                 ]
             )
+            
+            if not recipe_response or not recipe_response.choices:
+                logging.error("Empty response from OpenAI API")
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to generate recipe. Empty response from API.'
+                }), 500
+
             recipe = recipe_response.choices[0].message.content
             formatted_recipe = format_recipe(recipe)
 
@@ -97,9 +118,13 @@ def generate_recipe():
                     quality="hd",
                     model="dall-e-3"
                 )
+                
+                if not image_response or not image_response.data:
+                    raise Exception("Empty image response from API")
+                    
                 image_url = image_response.data[0].url
             except Exception as img_error:
-                logging.error(f"Image generation failed: {str(img_error)}")
+                logging.error(f"Image generation failed: {str(img_error)}\n{traceback.format_exc()}")
                 # If image generation fails, return recipe without image
                 return jsonify({
                     'success': True,
@@ -115,14 +140,14 @@ def generate_recipe():
             })
             
         except Exception as recipe_error:
-            logging.error(f"Recipe generation failed: {str(recipe_error)}")
+            logging.error(f"Recipe generation failed: {str(recipe_error)}\n{traceback.format_exc()}")
             return jsonify({
                 'success': False,
                 'error': 'Failed to generate recipe. Please try again.'
             }), 500
             
     except Exception as e:
-        logging.error(f"Request processing failed: {str(e)}")
+        logging.error(f"Request processing failed: {str(e)}\n{traceback.format_exc()}")
         return jsonify({
             'success': False,
             'error': 'An unexpected error occurred. Please try again.'
