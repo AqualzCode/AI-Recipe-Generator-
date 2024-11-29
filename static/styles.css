@@ -96,28 +96,52 @@ header h1 {
     padding: 0.75rem;
     border-radius: 8px;
     transition: all 0.3s ease;
+    margin: 0;
+    display: flex;
+    align-items: center;
 }
 
 .custom-checkbox:hover {
     background: rgba(255, 255, 255, 0.8);
 }
 
+.form-check-input {
+    margin-right: 8px;
+    cursor: pointer;
+    width: 1.2em;
+    height: 1.2em;
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.form-check-label {
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 0;
+}
+
 /* Button Styles */
 .btn-generate {
     background: var(--bg-gradient);
-    color: white;
+    color: white !important;
     padding: 1rem 2rem;
     border-radius: 10px;
     font-weight: 600;
+    border: none;
     position: relative;
     overflow: hidden;
     transition: all 0.3s ease;
+    cursor: pointer;
 }
 
-.btn-generate:hover {
+.btn-generate:hover, .btn-generate:focus, .btn-generate:active {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-    color: white;
+    color: white !important;
+    background: var(--bg-gradient);
 }
 
 .btn-animation {
