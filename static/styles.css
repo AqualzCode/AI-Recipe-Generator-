@@ -20,7 +20,6 @@ body {
     padding: 2rem;
 }
 
-/* Header Styles */
 header h1 {
     font-weight: 700;
     color: var(--primary-color);
@@ -45,7 +44,6 @@ header h1 {
     display: inline-block;
 }
 
-/* content layout */
 .content-container {
     display: grid;
     grid-template-columns: 400px 1fr;
@@ -53,7 +51,6 @@ header h1 {
     align-items: start;
 }
 
-/* glass card effect */
 .glass-card {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
@@ -64,7 +61,6 @@ header h1 {
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* form styles */
 .form-label {
     font-weight: 600;
     color: var(--text-primary);
@@ -123,7 +119,6 @@ header h1 {
     margin-bottom: 0;
 }
 
-/* button styles */
 .btn-generate {
     background: var(--bg-gradient);
     color: white !important;
@@ -162,8 +157,6 @@ header h1 {
         transform: translateX(100%);
     }
 }
-
-/* loading spinner */
 .loading-container {
     position: fixed;
     top: 0;
@@ -219,8 +212,6 @@ header h1 {
         transform: scale(1.0);
     }
 }
-
-/* recipe result styles */
 .recipe-section {
     width: 100%;
 }
@@ -269,8 +260,6 @@ header h1 {
     color: var(--text-secondary);
     margin-bottom: 1.5rem;
 }
-
-/* responsive */
 @media (max-width: 1200px) {
     .content-container {
         grid-template-columns: 1fr;
