@@ -21,3 +21,5 @@ Hello Guys!
 - AI: OpenAI GPT-4 and DALL-E 3
 - Frontend: HTML, CSS, JavaScript
 - Styling: CSS
+
+*I used AI to help generate some sudo code so I could write the code more easily*
